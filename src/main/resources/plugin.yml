@@ -1,0 +1,39 @@
+name: BedFight
+main: com.example.bedfight.BedFightPlugin
+version: ${project.version}
+author: YourName
+description: BedFight minigame with minestormparty integration
+# minestormparty is optional: without it, queues work and teams are split locally.
+softdepend: [minestormparty]
+
+commands:
+  bedfight:
+    description: BedFight queue, private matches and arena setup
+    usage: /<command> [1v1|2v2|3v3|private|leave]
+    aliases: [bf]
+
+  leave:
+    description: Leave the BedFight queue or current match
+    usage: /<command>
+    aliases: [l]
+
+  adminkiteditor:
+    description: Edit the kit given to players in a match
+    usage: /<command> [reset]
+    permission: bedfight.admin
+
+  beddefend:
+    description: Define the breakable bed-defense region of a team
+    usage: /<command> <po1|po2|clear> [color]
+    permission: bedfight.admin
+
+permissions:
+  bedfight.play:
+    description: Join the BedFight queue
+    default: true
+  bedfight.admin:
+    description: Arena setup commands
+    default: op
+  bedfight.rank.mvpplusplus:
+    description: MVP++ rank, allowed to create private matches
+    default: false

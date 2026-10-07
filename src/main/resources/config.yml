@@ -1,0 +1,9 @@
+# Mode used by plain "/bedfight" (1v1, 2v2 or 3v3)
+default-mode: 1v1
+# World whose spawn is used as lobby after a match (empty = first loaded world)
+lobby-world: ""
+# Frozen countdown before the match starts
+countdown-seconds: 5
+# Respawn delay while the bed is alive
+respawn-delay-seconds: 5
+end-delay-seconds: 8

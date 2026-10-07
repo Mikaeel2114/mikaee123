@@ -1,0 +1,58 @@
+# BedFight scoreboard settings  (reload with /bedfight reload)
+#
+# - Colors use &-codes. Max 15 lines. 1.8 limits a line to about 32 visible characters (colors count).
+# - "update-ticks": 20 = once per second, which keeps the ping numbers live.
+# - An empty line "" is a blank spacer.
+#
+# Placeholders for "match.lines":
+#   %mode%  %map%  %team%  %status%  %countdown%  %time%
+#   %player%  %opponent%  %ping% (your ping)  %opponent_ping% (average ping of the enemy team)
+#   %kills%  %bed_breaks%  %ip%
+#   %teams%  -> replaced by one line per team (see "team-line" below)
+# Placeholders for "queue.lines":
+#   %player%  %mode%  %queued%  %needed%  %queue_time%  %ping%  %ip%
+# Placeholders for "team-line":
+#   %color%  %letter%  %name%  %team_status%  %you%
+
+enabled: true
+update-ticks: 20
+ip: "minemen.club"
+
+match:
+  title: "&b&lMinemen Club"
+  lines:
+    - "&7&m------------"
+    - "&fMode: &b%mode%"
+    - "&fMap: &b%map%"
+    - ""
+    - "%teams%"
+    - ""
+    - "&fStatus: &e%status%"
+    - "&fTime: &b%time%"
+    - "&fKills: &a%kills%"
+    - ""
+    - "&fYour Ping: &a%ping%ms"
+    - "&fTheir Ping: &c%opponent_ping%ms"
+    - ""
+    - "&b%ip%"
+  team-line: "%color%%letter% &f%name%&7: %team_status%%you%"
+  # shown while the team's bed is alive
+  bed-alive: "&a\u2714"
+  # shown after the bed is destroyed: number of players still alive on that team
+  bed-dead: "&a%alive%"
+  # shown when the whole team is eliminated
+  eliminated: "&c\u2718"
+  # appended to your own team's line
+  you: " &7YOU"
+
+queue:
+  title: "&b&lMinemen Club"
+  lines:
+    - "&7&m------------"
+    - "&fMode: &bBedFight %mode%"
+    - "&fQueued: &a%queued%&7/&a%needed%"
+    - "&fWaiting: &b%queue_time%"
+    - ""
+    - "&fYour Ping: &a%ping%ms"
+    - ""
+    - "&b%ip%"
