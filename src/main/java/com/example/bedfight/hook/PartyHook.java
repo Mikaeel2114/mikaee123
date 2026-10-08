@@ -1,10 +1,6 @@
 package com.example.bedfight.hook;
 
 import com.example.bedfight.BedFightPlugin;
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
-
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -14,28 +10,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 
-/**
- * Hook into the custom "minestormparty" plugin.
- *
- * The real API of minestormparty is not known at compile time, so it is accessed through
- * reflection. If your plugin uses different method names, ONLY edit the name tables below.
- * Every lookup is tolerant: when something can't be resolved the hook falls back to
- * "no party" (single player) and a local random split.
- */
+/** Talks to the optional "minestormparty" plugin through reflection (no compile dependency). */
 public final class PartyHook {
-
-    private static final String PLUGIN_NAME = "minestormparty";
-
-    /** Methods on the plugin's main class that return the API / party manager (tried in order). */
     private static final String[] API_ACCESSORS = {"getPartyManager", "getPartyAPI", "getAPI", "getPartyService"};
-    /** api.getParty(Player) -> party object (or null when not in a party). */
     private static final String[] GET_PARTY = {"getParty", "getPartyOf", "getPlayerParty"};
-    /** party.getMembers() -> Collection of Player / UUID. */
     private static final String[] PARTY_MEMBERS = {"getMembers", "getPlayers", "getOnlineMembers"};
-    /** party.getLeader() -> Player / UUID. */
     private static final String[] PARTY_LEADER = {"getLeader", "getOwner"};
-    /** api.splitIntoTeams(Collection players, int teamSize) -> Collection of Collections. */
     private static final String[] SPLIT = {"splitIntoTeams", "splitTeams", "randomTeams", "createTeams"};
 
     private final BedFightPlugin plugin;
@@ -44,14 +28,14 @@ public final class PartyHook {
 
     public PartyHook(BedFightPlugin plugin) {
         this.plugin = plugin;
-        Plugin party = Bukkit.getPluginManager().getPlugin(PLUGIN_NAME);
+        Plugin party = Bukkit.getPluginManager().getPlugin("minestormparty");
         if (party == null || !party.isEnabled()) {
             plugin.getLogger().warning("minestormparty not found - team modes (2v2/3v3) are limited.");
             return;
         }
         Object resolved = null;
         for (String accessor : API_ACCESSORS) {
-            Object o = call(party, new String[]{accessor});
+            Object o = call(party, new String[] {accessor});
             if (o != null) {
                 resolved = o;
                 break;
@@ -64,7 +48,7 @@ public final class PartyHook {
 
     public boolean isAvailable() { return available; }
 
-    /** All members of the player's party (always contains the player itself). */
+    /** The player's party (leader first) or just the player when not in a party. */
     public List<Player> getPartyMembers(Player player) {
         List<Player> out = new ArrayList<>();
         if (available) {
@@ -78,7 +62,6 @@ public final class PartyHook {
         return out;
     }
 
-    /** True when the player leads their party (or has no party / leader can't be determined). */
     public boolean isLeader(Player player) {
         if (!available) {
             return true;
@@ -97,10 +80,6 @@ public final class PartyHook {
         return true;
     }
 
-    /**
-     * Randomly splits players into {@code teamCount} teams of {@code teamSize}.
-     * Uses minestormparty's splitter when available and valid, else a local shuffle.
-     */
     public List<List<Player>> splitIntoTeams(List<Player> players, int teamSize, int teamCount) {
         if (available) {
             Object raw = call(api, SPLIT, new ArrayList<>(players), teamSize);
@@ -119,8 +98,6 @@ public final class PartyHook {
         }
         return result;
     }
-
-    // ------------------------------------------------------------------ helpers
 
     private static boolean isValidSplit(List<List<Player>> teams, List<Player> players, int size, int count) {
         if (teams.size() != count) {
@@ -179,24 +156,20 @@ public final class PartyHook {
         return teams;
     }
 
-    /** Finds a public method by name + compatible arguments and invokes it. Returns null on failure. */
     private static Object call(Object target, String[] names, Object... args) {
         if (target == null) {
             return null;
         }
         for (String name : names) {
             for (Method m : target.getClass().getMethods()) {
-                if (!m.getName().equals(name) || m.getParameterCount() != args.length) {
-                    continue;
-                }
-                if (!accepts(m.getParameterTypes(), args)) {
-                    continue;
-                }
-                try {
-                    m.setAccessible(true);
-                    return m.invoke(target, args);
-                } catch (ReflectiveOperationException | RuntimeException ignored) {
-                    // try next candidate
+                if (m.getName().equals(name) && m.getParameterCount() == args.length
+                        && accepts(m.getParameterTypes(), args)) {
+                    try {
+                        m.setAccessible(true);
+                        return m.invoke(target, args);
+                    } catch (ReflectiveOperationException | RuntimeException ignored) {
+                        // try the next candidate
+                    }
                 }
             }
         }

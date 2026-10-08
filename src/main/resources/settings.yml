@@ -1,0 +1,65 @@
+# ---------------------------------------------------------------------------
+# BedFight settings            (reload with /bedfight reload)
+#
+# When the plugin is updated, any NEW keys are added to this file automatically.
+# Your existing values are never overwritten or deleted.
+#
+# Sound lists use the format  "SOUND_NAME:volume:pitch:delayTicks"
+# (volume, pitch and delay are optional). Sound names are the Spigot 1.8.8
+# names, e.g. NOTE_STICKS, NOTE_PLING, ORB_PICKUP, LEVEL_UP, SUCCESSFUL_HIT.
+# An empty list [] disables that sound.
+# ---------------------------------------------------------------------------
+
+game:
+  # Frozen countdown before the match starts
+  countdown-seconds: 5
+  # Respawn delay while the bed is alive
+  respawn-delay-seconds: 5
+  # Damage immunity after respawning
+  respawn-protection-seconds: 3
+  # Seconds between the winner being decided and everyone being sent to the lobby
+  end-delay-seconds: 8
+  # Seconds after the last hit during which a death still counts as a kill
+  kill-credit-seconds: 10
+  # Take fall damage during matches?
+  fall-damage: false
+  # Matches that last longer end in a draw. 0 = no limit
+  time-limit-minutes: 0
+
+spectator:
+  # Allow /bedfight spec <player>
+  enabled: true
+  # Flying speed of spectators (0.1 = normal flight)
+  fly-speed: 0.1
+  # How many blocks outside the arena box a spectator may fly horizontally
+  boundary-padding: 8
+  # Hotbar compass that opens the player teleporter
+  teleporter-item: true
+  # Hotbar bed that leaves spectator mode
+  leave-item: true
+
+messages:
+  cannot-build: "&cYou cannot build here!"
+  cannot-break: "&cYou can only break blocks placed by players!"
+
+private-match:
+  # Values the private match menu cycles through
+  respawn-delay-options: [3, 5, 8, 10]
+  time-limit-options: [0, 10, 15, 20]
+
+sounds:
+  # Played to every player once per second during the title countdown
+  countdown-tick: ["NOTE_STICKS:1.0:1.0"]
+  # Played on the last second(s) of the countdown (3, 2, 1)
+  countdown-last: ["NOTE_STICKS:1.0:1.6"]
+  fight-start: ["NOTE_PLING:1.0:2.0"]
+  # Played to the killer
+  kill: ["SUCCESSFUL_HIT:1.0:1.0", "ORB_PICKUP:1.0:1.9:2", "NOTE_PLING:0.8:2.0:5"]
+  # Played to the killer when the victim could not respawn (bed already destroyed)
+  final-kill: ["SUCCESSFUL_HIT:1.0:1.0", "LEVEL_UP:1.0:1.2:2", "NOTE_PLING:1.0:2.0:6", "NOTE_PLING:1.0:1.5:9"]
+  # Played to the victim
+  death: ["HURT_FLESH:1.0:0.8"]
+  # Played to the bed owner's team / the destroyer
+  bed-destroyed: ["ENDERDRAGON_GROWL:1.0:1.0"]
+  bed-break: ["ANVIL_LAND:0.8:1.0"]
+  victory: ["LEVEL_UP:1.0:1.0"]

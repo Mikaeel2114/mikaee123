@@ -17,7 +17,6 @@ public enum Mode {
 
     public int teamSize() { return teamSize; }
     public String label() { return label; }
-    /** Matches always have two teams. */
     public int totalPlayers() { return teamSize * 2; }
 
     public static Mode parse(String s) {

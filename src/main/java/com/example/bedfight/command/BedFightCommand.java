@@ -4,10 +4,16 @@ import com.example.bedfight.BedFightPlugin;
 import com.example.bedfight.arena.Arena;
 import com.example.bedfight.arena.ArenaManager;
 import com.example.bedfight.arena.Pos;
-import com.example.bedfight.arena.TeamSpec;
 import com.example.bedfight.arena.Teams;
+import com.example.bedfight.game.GameManager;
+import com.example.bedfight.game.Match;
 import com.example.bedfight.game.Mode;
-import com.example.bedfight.gui.PrivateMatchGui;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.DyeColor;
@@ -21,17 +27,10 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-
 public final class BedFightCommand implements CommandExecutor, TabCompleter {
-
     private static final String ADMIN = "bedfight.admin";
-    private static final List<String> ADMIN_SUBS = List.of("setuparena", "po1", "po2", "setspawn",
-            "createteam", "setteam", "setbed", "buildmode", "save", "reload");
+    private static final List<String> ADMIN_SUBS = List.of(
+            "setuparena", "po1", "po2", "setspawn", "createteam", "setteam", "setbed", "buildmode", "save", "reload");
 
     private final BedFightPlugin plugin;
 
@@ -47,23 +46,17 @@ public final class BedFightCommand implements CommandExecutor, TabCompleter {
         }
         ArenaManager arenas = plugin.getArenaManager();
 
-        // /leave and /l
         if (cmd.getName().equalsIgnoreCase("leave")) {
             return leave(p);
         }
         if (cmd.getName().equalsIgnoreCase("adminkiteditor")) {
             return kitEditor(p, args);
         }
-        if (cmd.getName().equalsIgnoreCase("beddefend")) {
-            return bedDefend(p, args);
-        }
 
-        // ---------------------------------------------------------- player side
         if (args.length == 0) {
             return queue(p, Mode.parse(plugin.getConfig().getString("default-mode", "1v1")));
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
-
         Mode asMode = Mode.parse(sub);
         if (asMode != null) {
             return queue(p, asMode);
@@ -71,8 +64,11 @@ public final class BedFightCommand implements CommandExecutor, TabCompleter {
         if (sub.equals("leave")) {
             return leave(p);
         }
+        if (sub.equals("spec") || sub.equals("spectate")) {
+            return spectate(p, args);
+        }
         if (sub.equals("private")) {
-            if (!p.hasPermission(PrivateMatchGui.PERMISSION)) {
+            if (!p.hasPermission("bedfight.rank.mvpplusplus")) {
                 plugin.msg(p, ChatColor.RED + "Only MVP++ players can create private matches.");
                 return true;
             }
@@ -83,10 +79,8 @@ public final class BedFightCommand implements CommandExecutor, TabCompleter {
             plugin.getPrivateGui().open(p);
             return true;
         }
-
-        // ----------------------------------------------------------- admin side
         if (!ADMIN_SUBS.contains(sub)) {
-            plugin.msg(p, ChatColor.RED + "Unknown sub-command. Usage: /bedfight [1v1|2v2|3v3|private|leave]");
+            plugin.msg(p, ChatColor.RED + "Unknown sub-command. Usage: /bedfight [1v1|2v2|3v3|private|spec <player>|leave]");
             return true;
         }
         if (!p.hasPermission(ADMIN)) {
@@ -103,27 +97,22 @@ public final class BedFightCommand implements CommandExecutor, TabCompleter {
             if (err != null) {
                 plugin.msg(p, ChatColor.RED + err);
             } else {
-                plugin.msg(p, ChatColor.GREEN + "World '" + args[1] + "' loaded. You are now setting up arena '"
-                        + args[1] + "'. Next: /bedfight po1, po2, setspawn, createteam, setteam, setbed, save.");
+                plugin.msg(p, ChatColor.GREEN + "World '" + args[1] + "' loaded. You are now setting up arena '" + args[1]
+                        + "'. Next: /bedfight po1, po2, setspawn, createteam, setteam, setbed, save.");
             }
             return true;
         }
-
         if (sub.equals("buildmode")) {
             if (arenas.toggleBuildMode(p)) {
-                p.sendMessage("you currently buildmode");
+                plugin.msg(p, ChatColor.GREEN + "Build mode enabled. You can edit protected arena worlds. Run again to disable it.");
             } else {
                 plugin.msg(p, "Build mode disabled. The map is protected again.");
             }
             return true;
         }
-
         if (sub.equals("reload")) {
-            plugin.reloadConfig();
-            arenas.loadAll();
-            plugin.getKitManager().load();
-            plugin.getScoreboards().reload();
-            plugin.msg(p, ChatColor.GREEN + "Reloaded config.yml, scoreboard.yml, kit.yml and arenas.");
+            plugin.reloadAll();
+            plugin.msg(p, ChatColor.GREEN + "Reloaded config.yml, settings.yml, scoreboard.yml, kit.yml and arenas.");
             return true;
         }
 
@@ -132,7 +121,6 @@ public final class BedFightCommand implements CommandExecutor, TabCompleter {
             plugin.msg(p, ChatColor.RED + "Start with /bedfight setuparena <world_name> first.");
             return true;
         }
-
         switch (sub) {
             case "po1":
             case "po2":
@@ -151,34 +139,24 @@ public final class BedFightCommand implements CommandExecutor, TabCompleter {
             case "setbed":
                 setBed(p, arena, args);
                 break;
-            case "save": {
+            case "save":
                 String err = arenas.save(p);
                 plugin.msg(p, err == null
                         ? ChatColor.GREEN + "Arena '" + arena.getName() + "' saved to arenas/" + arena.getName() + ".yml"
                         : ChatColor.RED + err);
                 break;
-            }
             default:
                 break;
         }
         return true;
     }
 
-    // ------------------------------------------------------------- player cmds
+    // ------------------------------------------------------------- player commands
 
-    /** Leaves the queue, or forfeits the current match. */
     private boolean leave(Player p) {
-        if (plugin.getGameManager().leaveQueue(p)) {
-            plugin.msg(p, "You left the queue.");
-            return true;
+        if (!plugin.getGameManager().leaveAny(p)) {
+            plugin.msg(p, ChatColor.RED + "You are not in a BedFight queue, match or spectating.");
         }
-        com.example.bedfight.game.Match m = plugin.getGameManager().getMatch(p);
-        if (m != null) {
-            m.onLeave(p);
-            plugin.msg(p, "You left the BedFight match.");
-            return true;
-        }
-        plugin.msg(p, ChatColor.RED + "You are not in a BedFight queue or match.");
         return true;
     }
 
@@ -188,12 +166,33 @@ public final class BedFightCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         plugin.getGameManager().joinQueue(p, mode == null ? Mode.SOLO : mode);
+        // switch to the queue scoreboard immediately (also covers the "already queued" case)
+        plugin.getScoreboards().refresh(p);
         return true;
     }
 
-    // --------------------------------------------------------------- admin cmds
+    /** /bedfight spec <player> */
+    private boolean spectate(Player p, String[] args) {
+        if (!p.hasPermission("bedfight.spectate")) {
+            plugin.msg(p, ChatColor.RED + "You don't have permission to spectate.");
+            return true;
+        }
+        if (args.length < 2) {
+            plugin.msg(p, ChatColor.RED + "Usage: /bedfight spec <player>");
+            return true;
+        }
+        Player target = Bukkit.getPlayerExact(args[1]);
+        if (target == null) {
+            plugin.msg(p, ChatColor.RED + "Player '" + args[1] + "' is not online.");
+            return true;
+        }
+        String err = plugin.getGameManager().spectate(p, target);
+        if (err != null) {
+            plugin.msg(p, ChatColor.RED + err);
+        }
+        return true;
+    }
 
-    /** /adminkiteditor [reset] */
     private boolean kitEditor(Player p, String[] args) {
         if (!p.hasPermission(ADMIN)) {
             plugin.msg(p, ChatColor.RED + "You don't have permission to do that.");
@@ -208,56 +207,7 @@ public final class BedFightCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    /**
-     * /beddefend po1|po2|clear [color]
-     * Marks the region around a team's bed whose map-built blocks may be broken during a match.
-     */
-    private boolean bedDefend(Player p, String[] args) {
-        if (!p.hasPermission(ADMIN)) {
-            plugin.msg(p, ChatColor.RED + "You don't have permission to do that.");
-            return true;
-        }
-        Arena arena = plugin.getArenaManager().session(p);
-        if (arena == null) {
-            plugin.msg(p, ChatColor.RED + "Start with /bedfight setuparena <world_name> first.");
-            return true;
-        }
-        String op = args.length == 0 ? "" : args[0].toLowerCase(Locale.ROOT);
-        if (!op.equals("po1") && !op.equals("po2") && !op.equals("clear")) {
-            plugin.msg(p, ChatColor.RED + "Usage: /beddefend <po1|po2|clear> [color]");
-            return true;
-        }
-        DyeColor c = resolveTeam(p, arena, args); // color is args[1], same shape as setteam/setbed
-        if (c == null) {
-            return true;
-        }
-        TeamSpec t = arena.team(c, true);
-        if (op.equals("clear")) {
-            t.setDefense1(null);
-            t.setDefense2(null);
-            plugin.msg(p, ChatColor.GREEN + "Bed defense region of team " + Teams.display(c) + ChatColor.GREEN + " cleared.");
-            return true;
-        }
-        Pos pos = Pos.ofBlock(p.getLocation().getBlock());
-        if (op.equals("po1")) {
-            t.setDefense1(pos);
-        } else {
-            t.setDefense2(pos);
-        }
-        String msg = ChatColor.GREEN + "Bed defense " + op + " of team " + Teams.display(c) + ChatColor.GREEN
-                + " set to " + pos.blockX() + ", " + pos.blockY() + ", " + pos.blockZ() + ".";
-        if (t.hasDefense()) {
-            int dx = Math.abs(t.getDefense1().blockX() - t.getDefense2().blockX()) + 1;
-            int dy = Math.abs(t.getDefense1().blockY() - t.getDefense2().blockY()) + 1;
-            int dz = Math.abs(t.getDefense1().blockZ() - t.getDefense2().blockZ()) + 1;
-            msg += ChatColor.GRAY + " Region " + dx + "x" + dy + "x" + dz
-                    + ": blocks inside can be broken during matches. Don't forget /bedfight save.";
-        } else {
-            msg += ChatColor.GRAY + " Now set the opposite corner with /beddefend " + (op.equals("po1") ? "po2" : "po1") + ".";
-        }
-        plugin.msg(p, msg);
-        return true;
-    }
+    // ------------------------------------------------------------- arena setup
 
     private void setBound(Player p, Arena arena, boolean first) {
         Pos pos = Pos.ofBlock(p.getLocation().getBlock());
@@ -266,17 +216,15 @@ public final class BedFightCommand implements CommandExecutor, TabCompleter {
         } else {
             arena.setPos2(pos);
         }
-        String msg = ChatColor.GREEN + (first ? "po1" : "po2") + " set to " + pos.blockX() + ", "
-                + pos.blockY() + ", " + pos.blockZ() + ".";
+        String msg = ChatColor.GREEN + (first ? "po1" : "po2") + " set to " + pos.blockX() + ", " + pos.blockY() + ", " + pos.blockZ() + ".";
         if (arena.hasBounds()) {
-            msg += ChatColor.GRAY + " Void level (min Y) = " + ChatColor.WHITE + arena.getMinY()
-                    + ChatColor.GRAY + ", max build height (max Y) = " + ChatColor.WHITE + arena.getMaxY() + ".";
+            msg += " Void level (min Y) = " + ChatColor.WHITE + arena.getMinY() + ChatColor.GREEN
+                    + ", max build height (max Y) = " + ChatColor.WHITE + arena.getMaxY() + ChatColor.GREEN + ".";
         }
         plugin.msg(p, msg);
         if (arena.hasBounds() && arena.getMaxY() - arena.getMinY() < 8) {
             plugin.msg(p, ChatColor.YELLOW + "Warning: only " + (arena.getMaxY() - arena.getMinY())
-                    + " blocks between void level and build limit. Players can't build above Y "
-                    + arena.getMaxY() + " - set one point at the lowest void level and one high above the islands.");
+                    + " blocks between void level and build limit. Set one point at the lowest void level and one high above the islands.");
         }
     }
 
@@ -293,8 +241,7 @@ public final class BedFightCommand implements CommandExecutor, TabCompleter {
         boolean existed = arena.getTeams().containsKey(c);
         arena.team(c, true);
         plugin.getArenaManager().select(p, c);
-        plugin.msg(p, ChatColor.GREEN + "Team " + Teams.display(c) + ChatColor.GREEN
-                + (existed ? " already exists, selected." : " registered and selected.")
+        plugin.msg(p, ChatColor.GREEN + "Team " + Teams.display(c) + ChatColor.GREEN + (existed ? " selected." : " created.")
                 + " Now use /bedfight setteam and /bedfight setbed.");
     }
 
@@ -309,9 +256,7 @@ public final class BedFightCommand implements CommandExecutor, TabCompleter {
             plugin.msg(p, ChatColor.RED + "Stand on a solid block - the block under your feet is the spawn.");
             return;
         }
-        // players spawn centred on top of the registered block
-        arena.team(c, true).setSpawn(new Pos(under.getX() + 0.5, under.getY() + 1, under.getZ() + 0.5,
-                loc.getYaw(), 0f));
+        arena.team(c, true).setSpawn(new Pos(under.getX() + 0.5D, under.getY() + 1, under.getZ() + 0.5D, loc.getYaw(), 0.0F));
         plugin.msg(p, ChatColor.GREEN + "Spawn of team " + Teams.display(c) + ChatColor.GREEN + " set to block "
                 + under.getX() + ", " + under.getY() + ", " + under.getZ() + ".");
     }
@@ -321,7 +266,7 @@ public final class BedFightCommand implements CommandExecutor, TabCompleter {
         if (c == null) {
             return;
         }
-        Block bed = p.getTargetBlock((java.util.HashSet<Byte>) null, 6);
+        Block bed = p.getTargetBlock((HashSet<Byte>) null, 6);
         if (bed == null || bed.getType() != Material.BED_BLOCK) {
             Block feet = p.getLocation().getBlock();
             bed = feet.getType() == Material.BED_BLOCK ? feet : null;
@@ -335,7 +280,6 @@ public final class BedFightCommand implements CommandExecutor, TabCompleter {
                 + bed.getX() + ", " + bed.getY() + ", " + bed.getZ() + ".");
     }
 
-    /** Team from the optional argument, else the last created/selected team. */
     private DyeColor resolveTeam(Player p, Arena arena, String[] args) {
         if (args.length >= 2) {
             DyeColor c = Teams.parse(args[1]);
@@ -362,7 +306,7 @@ public final class BedFightCommand implements CommandExecutor, TabCompleter {
         return String.join(", ", l);
     }
 
-    // ----------------------------------------------------------- tab completion
+    // ---------------------------------------------------------------- tab complete
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
@@ -380,26 +324,21 @@ public final class BedFightCommand implements CommandExecutor, TabCompleter {
             }
             return filter(out, args);
         }
-        if (cn.equals("beddefend")) {
-            if (args.length == 1) {
-                out.addAll(List.of("po1", "po2", "clear"));
-            } else if (args.length == 2) {
-                Arena a = plugin.getArenaManager().session(p);
-                if (a != null) {
-                    for (DyeColor c : a.getTeams().keySet()) {
-                        out.add(c.name().toLowerCase(Locale.ROOT));
-                    }
-                }
-            }
-            return filter(out, args);
-        }
         if (args.length == 1) {
-            out.addAll(List.of("1v1", "2v2", "3v3", "leave"));
-            if (p.hasPermission(PrivateMatchGui.PERMISSION)) {
+            out.addAll(List.of("1v1", "2v2", "3v3", "spec", "leave"));
+            if (p.hasPermission("bedfight.rank.mvpplusplus")) {
                 out.add("private");
             }
             if (p.hasPermission(ADMIN)) {
                 out.addAll(ADMIN_SUBS);
+            }
+        } else if (args.length == 2 && (args[0].equalsIgnoreCase("spec") || args[0].equalsIgnoreCase("spectate"))) {
+            GameManager games = plugin.getGameManager();
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                Match m = games.getMatchAny(online);
+                if (m != null && !online.equals(p)) {
+                    out.add(online.getName());
+                }
             }
         } else if (args.length == 2 && p.hasPermission(ADMIN)) {
             String sub = args[0].toLowerCase(Locale.ROOT);
@@ -415,12 +354,11 @@ public final class BedFightCommand implements CommandExecutor, TabCompleter {
                     }
                 }
             } else if (sub.equals("setuparena")) {
-                HashSet<String> names = new HashSet<>();
+                Set<String> names = new HashSet<>();
                 for (World w : Bukkit.getWorlds()) {
                     names.add(w.getName());
                 }
-                File[] dirs = Bukkit.getWorldContainer().listFiles(
-                        f -> f.isDirectory() && new File(f, "level.dat").isFile());
+                File[] dirs = Bukkit.getWorldContainer().listFiles(f -> f.isDirectory() && new File(f, "level.dat").isFile());
                 if (dirs != null) {
                     for (File f : dirs) {
                         names.add(f.getName());

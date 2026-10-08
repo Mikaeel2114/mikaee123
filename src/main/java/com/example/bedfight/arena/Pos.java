@@ -5,7 +5,6 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 
-/** World-independent position, so the same arena data can be applied to any world copy. */
 public record Pos(double x, double y, double z, float yaw, float pitch) {
 
     public static Pos of(Location l) {
@@ -13,7 +12,7 @@ public record Pos(double x, double y, double z, float yaw, float pitch) {
     }
 
     public static Pos ofBlock(Block b) {
-        return new Pos(b.getX(), b.getY(), b.getZ(), 0f, 0f);
+        return new Pos(b.getX(), b.getY(), b.getZ(), 0.0F, 0.0F);
     }
 
     public Location toLocation(World w) {
@@ -33,7 +32,7 @@ public record Pos(double x, double y, double z, float yaw, float pitch) {
     }
 
     public static Pos read(ConfigurationSection s) {
-        if (s == null) {
+        if (s == null || !s.contains("x") || !s.contains("y") || !s.contains("z")) {
             return null;
         }
         return new Pos(s.getDouble("x"), s.getDouble("y"), s.getDouble("z"),

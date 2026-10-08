@@ -1,19 +1,13 @@
 package com.example.bedfight.util;
 
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
-
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 
-/**
- * Title / subtitle screen for 1.8.x. The 1.8.8 API has no sendTitle(), so the packet is
- * built through reflection (version taken from the server's CraftBukkit package).
- * Falls back to chat if anything fails.
- */
+/** Sends 1.8 title packets through reflection (falls back to chat). */
 public final class Titles {
-
     private static boolean initialised;
     private static boolean working;
     private static Constructor<?> timesCtor;
@@ -36,13 +30,11 @@ public final class Titles {
             String pkg = Bukkit.getServer().getClass().getPackage().getName();
             String ver = pkg.substring(pkg.lastIndexOf('.') + 1);
             String nms = "net.minecraft.server." + ver + ".";
-
             Class<?> packet = Class.forName(nms + "PacketPlayOutTitle");
             Class<?> action = Class.forName(nms + "PacketPlayOutTitle$EnumTitleAction");
             Class<?> chat = Class.forName(nms + "IChatBaseComponent");
             Class<?> chatSerializer = Class.forName(nms + "IChatBaseComponent$ChatSerializer");
             Class<?> basePacket = Class.forName(nms + "Packet");
-
             timesCtor = packet.getConstructor(int.class, int.class, int.class);
             textCtor = packet.getConstructor(action, chat);
             titleAction = constant(action, "TITLE");
@@ -72,7 +64,6 @@ public final class Titles {
         return serializer.invoke(null, json);
     }
 
-    /** Times are in ticks. */
     public static void send(Player p, String title, String subtitle, int fadeIn, int stay, int fadeOut) {
         init();
         if (working) {

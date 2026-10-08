@@ -9,14 +9,12 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Set;
 
-/** Copies / deletes world folders (used to create a fresh map copy per match). */
 public final class WorldFiles {
-
     private static final Set<String> SKIP = Set.of("uid.dat", "session.lock");
 
     private WorldFiles() {}
 
-    public static void copy(Path src, Path dst) throws IOException {
+    public static void copy(final Path src, final Path dst) throws IOException {
         Files.walkFileTree(src, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
@@ -27,8 +25,7 @@ public final class WorldFiles {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                 if (!SKIP.contains(file.getFileName().toString())) {
-                    Files.copy(file, dst.resolve(src.relativize(file).toString()),
-                            StandardCopyOption.REPLACE_EXISTING);
+                    Files.copy(file, dst.resolve(src.relativize(file).toString()), StandardCopyOption.REPLACE_EXISTING);
                 }
                 return FileVisitResult.CONTINUE;
             }
@@ -54,7 +51,7 @@ public final class WorldFiles {
                 }
             });
         } catch (IOException ignored) {
-            // best effort cleanup
+            // best effort
         }
     }
 }

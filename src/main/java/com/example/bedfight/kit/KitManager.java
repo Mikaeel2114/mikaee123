@@ -2,6 +2,11 @@ package com.example.bedfight.kit;
 
 import com.example.bedfight.BedFightPlugin;
 import com.example.bedfight.util.YamlFiles;
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.logging.Level;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -12,26 +17,11 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.logging.Level;
-
-/**
- * The kit given to every player when a match starts and when they respawn.
- * Stored in plugins/BedFight/kit.yml and edited in game with /adminkiteditor.
- * Wool / stained clay / stained glass / carpet and leather armor are re-colored to the team color.
- */
 public final class KitManager {
-
     private static final String[] ARMOR_KEYS = {"helmet", "chestplate", "leggings", "boots"};
-
     private final BedFightPlugin plugin;
     private final File file;
-    /** Inventory slot (0-8 hotbar, 9-35 main) -> item. */
     private final Map<Integer, ItemStack> items = new TreeMap<>();
-    /** helmet, chestplate, leggings, boots */
     private final ItemStack[] armor = new ItemStack[4];
 
     public KitManager(BedFightPlugin plugin) {
@@ -60,7 +50,7 @@ public final class KitManager {
                         items.put(slot, it);
                     }
                 } catch (NumberFormatException ignored) {
-                    // skip bad key
+                    // skip invalid slot keys
                 }
             }
         }
@@ -69,7 +59,6 @@ public final class KitManager {
         }
     }
 
-    /** Default kit (Minemen Club BedFight): iron sword, 64 wool, shears, golden apple, leather armor. */
     public void resetToDefault() {
         items.clear();
         items.put(0, new ItemStack(Material.IRON_SWORD));
@@ -84,10 +73,8 @@ public final class KitManager {
     }
 
     public Map<Integer, ItemStack> getItems() { return items; }
-
     public ItemStack[] getArmor() { return armor; }
 
-    /** Replaces the kit and writes kit.yml. */
     public void set(Map<Integer, ItemStack> newItems, ItemStack[] newArmor) {
         items.clear();
         for (Map.Entry<Integer, ItemStack> e : newItems.entrySet()) {
@@ -116,7 +103,6 @@ public final class KitManager {
         }
     }
 
-    /** Gives the kit to the player (inventory is cleared first). */
     public void apply(Player p, DyeColor color) {
         PlayerInventory inv = p.getInventory();
         inv.clear();

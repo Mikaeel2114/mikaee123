@@ -1,12 +1,10 @@
 package com.example.bedfight.arena;
 
+import java.util.Locale;
 import org.bukkit.ChatColor;
 import org.bukkit.DyeColor;
 
-import java.util.Locale;
-
 public final class Teams {
-
     private Teams() {}
 
     public static DyeColor parse(String input) {
@@ -46,8 +44,14 @@ public final class Teams {
         }
     }
 
-    public static String display(DyeColor c) {
+    /** Plain team name, e.g. "Light blue". */
+    public static String name(DyeColor c) {
         String n = c.name().toLowerCase(Locale.ROOT).replace('_', ' ');
-        return chat(c).toString() + Character.toUpperCase(n.charAt(0)) + n.substring(1) + ChatColor.RESET;
+        return Character.toUpperCase(n.charAt(0)) + n.substring(1);
+    }
+
+    /** Colored team name, e.g. "§bLight blue". */
+    public static String display(DyeColor c) {
+        return chat(c) + name(c);
     }
 }

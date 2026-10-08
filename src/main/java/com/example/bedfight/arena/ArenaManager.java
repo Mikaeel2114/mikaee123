@@ -1,13 +1,7 @@
 package com.example.bedfight.arena;
 
 import com.example.bedfight.BedFightPlugin;
-import org.bukkit.Bukkit;
-import org.bukkit.DyeColor;
-import org.bukkit.World;
-import org.bukkit.WorldCreator;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
-
+import com.example.bedfight.util.YamlFiles;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
@@ -18,13 +12,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
+import org.bukkit.Bukkit;
+import org.bukkit.DyeColor;
+import org.bukkit.World;
+import org.bukkit.WorldCreator;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 
-/**
- * Handles YML persistence, admin setup sessions, build mode and
- * protection of arena (template) worlds.
- */
 public final class ArenaManager {
-
     private final BedFightPlugin plugin;
     private final File dir;
     private final Map<String, Arena> arenas = new LinkedHashMap<>();
@@ -36,8 +31,6 @@ public final class ArenaManager {
         this.plugin = plugin;
         this.dir = new File(plugin.getDataFolder(), "arenas");
     }
-
-    // ------------------------------------------------------------ persistence
 
     public void loadAll() {
         arenas.clear();
@@ -64,9 +57,8 @@ public final class ArenaManager {
 
     public Collection<Arena> all() { return arenas.values(); }
 
-    public Arena get(String name) { return arenas.get(name.toLowerCase()); }
+    public Arena get(String name) { return name == null ? null : arenas.get(name.toLowerCase()); }
 
-    /** @return null on success, otherwise an error message. */
     public String save(Player p) {
         Arena a = sessions.get(p.getUniqueId());
         if (a == null) {
@@ -84,12 +76,11 @@ public final class ArenaManager {
         File f = new File(dir, a.getName() + ".yml");
         try {
             dir.mkdirs();
-            y.save(f);
+            YamlFiles.save(y, f);
         } catch (IOException ex) {
             plugin.getLogger().log(Level.SEVERE, "Could not save arena " + a.getName(), ex);
             return "Could not write " + f.getName() + ": " + ex.getMessage();
         }
-        // register an independent, re-read copy (what is on disk is what is used)
         arenas.put(a.getName().toLowerCase(), Arena.read(a.getName(), y));
         World w = Bukkit.getWorld(a.getWorldName());
         if (w != null) {
@@ -98,9 +89,6 @@ public final class ArenaManager {
         return null;
     }
 
-    // ----------------------------------------------------------- setup session
-
-    /** @return null on success, otherwise an error message. */
     public String setupArena(Player p, String worldName) {
         if (!worldName.matches("[A-Za-z0-9_.\\-]+") || worldName.contains("..")) {
             return "Invalid world name.";
@@ -108,8 +96,7 @@ public final class ArenaManager {
         File container = Bukkit.getWorldContainer();
         File folder = new File(container, worldName);
         if (!folder.isDirectory() || !new File(folder, "level.dat").isFile()) {
-            return "World folder '" + worldName + "' (with level.dat) not found in "
-                    + container.getAbsolutePath();
+            return "World folder '" + worldName + "' (with level.dat) not found in " + container.getAbsolutePath();
         }
         World world = Bukkit.getWorld(worldName);
         if (world == null) {
@@ -118,7 +105,6 @@ public final class ArenaManager {
         if (world == null) {
             return "Failed to load world '" + worldName + "'.";
         }
-
         File existing = new File(dir, worldName + ".yml");
         Arena arena = existing.isFile()
                 ? Arena.read(worldName, YamlConfiguration.loadConfiguration(existing))
@@ -130,14 +116,9 @@ public final class ArenaManager {
     }
 
     public Arena session(Player p) { return sessions.get(p.getUniqueId()); }
-
     public void select(Player p, DyeColor c) { selectedTeam.put(p.getUniqueId(), c); }
-
     public DyeColor selected(Player p) { return selectedTeam.get(p.getUniqueId()); }
 
-    // -------------------------------------------------------------- build mode
-
-    /** @return new state */
     public boolean toggleBuildMode(Player p) {
         if (!buildMode.remove(p.getUniqueId())) {
             buildMode.add(p.getUniqueId());
@@ -148,11 +129,10 @@ public final class ArenaManager {
 
     public boolean isBuildMode(Player p) { return buildMode.contains(p.getUniqueId()); }
 
-    public void onQuit(Player p) { buildMode.remove(p.getUniqueId()); }
+    public void onQuit(Player p) {
+        buildMode.remove(p.getUniqueId());
+    }
 
-    // -------------------------------------------------------------- protection
-
-    /** True for saved arena worlds and worlds currently being set up (not for match copies). */
     public boolean isTemplateWorld(World w) {
         String n = w.getName();
         for (Arena a : arenas.values()) {

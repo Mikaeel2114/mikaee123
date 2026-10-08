@@ -3,11 +3,12 @@
 # - Colors use &-codes. Max 15 lines. 1.8 limits a line to about 32 visible characters (colors count).
 # - "update-ticks": 20 = once per second, which keeps the ping numbers live.
 # - An empty line "" is a blank spacer.
+# - The board switches automatically: queue -> match -> spectator -> none.
 #
-# Placeholders for "match.lines":
+# Placeholders for "match.lines" and "spectator.lines":
 #   %mode%  %map%  %team%  %status%  %countdown%  %time%
 #   %player%  %opponent%  %ping% (your ping)  %opponent_ping% (average ping of the enemy team)
-#   %kills%  %bed_breaks%  %ip%
+#   %kills%  %bed_breaks%  %ip%  %spectators%
 #   %teams%  -> replaced by one line per team (see "team-line" below)
 # Placeholders for "queue.lines":
 #   %player%  %mode%  %queued%  %needed%  %queue_time%  %ping%  %ip%
@@ -54,5 +55,22 @@ queue:
     - "&fWaiting: &b%queue_time%"
     - ""
     - "&fYour Ping: &a%ping%ms"
+    - ""
+    - "&b%ip%"
+
+spectator:
+  title: "&b&lMinemen Club"
+  lines:
+    - "&7&m------------"
+    - "&fMode: &b%mode%"
+    - "&fMap: &b%map%"
+    - ""
+    - "%teams%"
+    - ""
+    - "&fStatus: &e%status%"
+    - "&fTime: &b%time%"
+    - ""
+    - "&7You are spectating"
+    - "&fSpectators: &b%spectators%"
     - ""
     - "&b%ip%"

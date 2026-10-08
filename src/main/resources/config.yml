@@ -2,8 +2,4 @@
 default-mode: 1v1
 # World whose spawn is used as lobby after a match (empty = first loaded world)
 lobby-world: ""
-# Frozen countdown before the match starts
-countdown-seconds: 5
-# Respawn delay while the bed is alive
-respawn-delay-seconds: 5
-end-delay-seconds: 8
+# NOTE: countdown, respawn, sounds, spectator and message options live in settings.yml
